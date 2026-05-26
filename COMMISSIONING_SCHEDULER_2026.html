@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commissioning Resource Scheduler 2026</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a2744;--navy2:#253460;--blue:#0969da;--blue2:#2986e8;
+  --bg:#f0f4f8;--surface:#ffffff;--border:#d0d7de;--text:#1a1f2e;--muted:#6b7280;
+  --leave:#f4a5a5;--sick:#ff7070;--training:#a8e6cf;--bank:#d4d4d4;
+  --wfh:#b3d9f7;--office:#d4f0d4;--admin:#e8e8e8;--notavail:#e0c0f0;
+  --tbc:#ffe8a0;--project:#ddeeff;--weekend:#f7f7f7;--ooh:#d4a8f0;
+  --shadow:0 1px 3px rgba(0,0,0,.12);--shadow2:0 4px 12px rgba(0,0,0,.15);
+  --radius:6px;--radius2:10px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
+button{cursor:pointer;border:none;background:none;font:inherit}
+input,select,textarea{font:inherit;border:1px solid var(--border);border-radius:var(--radius);padding:5px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(9,105,218,.15)}
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#header{background:var(--navy);color:#fff;padding:0 16px;display:flex;align-items:center;gap:12px;height:52px;flex-shrink:0;box-shadow:var(--shadow2)}
+#header h1{font-size:15px;font-weight:700;white-space:nowrap}
+#header h1 span{color:#7eb3f5;font-size:11px;font-weight:400;margin-left:6px}
+.nav-tabs{display:flex;gap:2px;margin-left:4px}
+.nav-tab{padding:5px 12px;border-radius:var(--radius);color:rgba(255,255,255,.7);font-size:12px;font-weight:500;transition:.15s}
+.nav-tab:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-tab.active{background:var(--blue);color:#fff}
+.header-spacer{flex:1}
+.header-actions{display:flex;gap:6px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:var(--radius);font-size:12px;font-weight:500;transition:.15s;white-space:nowrap}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue2)}
+.btn-secondary{background:rgba(255,255,255,.12);color:#fff}
+.btn-secondary:hover{background:rgba(255,255,255,.2)}
+.btn-sm{padding:4px 9px;font-size:11px}
+.btn-outline{border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.btn-outline:hover{background:var(--bg)}
+.btn-danger{background:#dc3545;color:#fff}
+.btn-danger:hover{background:#c82333}
+.btn-success{background:#28a745;color:#fff}
+.btn-success:hover{background:#218838}
+.btn-warn{background:#f0ad4e;color:#fff}
+.view{display:none;flex:1;overflow:hidden}
+.view.active{display:flex;flex-direction:column}
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+.week-nav{display:flex;align-items:center;gap:5px}
+.week-nav button{padding:4px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:12px}
+.week-nav button:hover{background:var(--bg)}
+.week-label{font-size:12px;font-weight:600;min-width:170px;text-align:center}
+.grid-scroll-container{flex:1;overflow:auto}
+.grid-table{border-collapse:collapse;width:max-content}
+.grid-table th{background:var(--navy);color:#fff;font-weight:600;font-size:11px;position:sticky;top:0;z-index:20;white-space:nowrap;padding:4px 8px}
+.grid-table td{padding:4px 8px;border:1px solid var(--border);font-size:11px}
+.legend{display:flex;gap:8px;align-items:center;padding:5px 16px;background:var(--surface);border-top:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);cursor:default}
+.legend-swatch{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.1)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;color:var(--muted);gap:8px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="header">
+  <h1>Commissioning Scheduler <span>2026</span></h1>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-view="grid">📅 Grid</button>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="exportData()">⬇ Export</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="week-nav">
+    <button onclick="navigateWeek(-1)">◀</button>
+    <span class="week-label" id="weekLabel">Week of Jan 1, 2026</span>
+    <button onclick="navigateWeek(1)">▶</button>
+    <button class="btn-outline btn btn-sm" onclick="goToToday()">Today</button>
+  </div>
+</div>
+
+<div id="grid-view" class="view active">
+  <div class="grid-scroll-container" id="gridScroll">
+    <div id="gridContent">
+      <table class="grid-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Engineer</th>
+            <th>Assignment</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="gridBody">
+          <tr><td colspan="4" class="empty-state">Loading schedule data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="legend" id="legend">
+    <span style="font-size:10px;font-weight:700;color:var(--muted);margin-right:4px">KEY:</span>
+    <span id="legendItems"></span>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Seed data embedded
+const SEED_ENGINEERS = [{"id":"e4","name":"Mark Grimes","location":"Kent TN8","region":"Director","col":4},{"id":"e5","name":"Paul Simms","location":"Kent","region":"South","col":5},{"id":"e6","name":"Craig Emerson","location":"Weybridge","region":"Managers","col":6},{"id":"e7","name":"Reece Hounslow","location":"Kent TN8","region":"South","col":7},{"id":"e12","name":"Sam Monk","location":"Kent ME7","region":"South","col":12},{"id":"e13","name":"Geno Popaja","location":"Wokingham RG41","region":"South","col":13},{"id":"e14","name":"Flavio Curras","location":"Watford","region":"South","col":14},{"id":"e15","name":"Jacob Smale","location":"Grove Park SE12","region":"South","col":15},{"id":"e16","name":"Daniel Wilkins","location":"Greenwich","region":"South","col":16},{"id":"e17","name":"Jeremy Kerwan","location":"Kent ME15","region":"South","col":17},{"id":"e18","name":"Tudor Marcu","location":"London E14","region":"South","col":18},{"id":"e19","name":"Peter Turner","location":"Kent TN24","region":"South","col":19},{"id":"e20","name":"Alain Carver","location":"Staines","region":"South","col":20}];
+
+const legendConfig = [
+  {type:'project', label:'Project', color:'#ddeeff'},
+  {type:'leave', label:'Leave', color:'#f4a5a5'},
+  {type:'sick', label:'Sick', color:'#ff7070'},
+  {type:'training', label:'Training', color:'#a8e6cf'},
+  {type:'bank_holiday', label:'Bank Holiday', color:'#d4d4d4'},
+  {type:'wfh', label:'WFH', color:'#b3d9f7'},
+  {type:'office', label:'Office', color:'#d4f0d4'},
+  {type:'admin', label:'Admin', color:'#e8e8e8'}
+];
+
+let currentWeek = 0;
+
+function getWeekStart(weekOffset) {
+  const date = new Date(2026, 0, 1);
+  date.setDate(date.getDate() + (weekOffset * 7));
+  return date;
+}
+
+function formatDate(date) {
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function renderLegend() {
+  const legendItems = document.getElementById('legendItems');
+  legendItems.innerHTML = legendConfig.map(item => 
+    `<span class="legend-item"><span class="legend-swatch" style="background:${item.color}"></span>${item.label}</span>`
+  ).join('');
+}
+
+function renderGrid() {
+  const weekStart = getWeekStart(currentWeek);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  
+  document.getElementById('weekLabel').textContent = 
+    `Week of ${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+  
+  const tbody = document.getElementById('gridBody');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Schedule view - showing week of ' + formatDate(weekStart) + '</td></tr>';
+}
+
+function navigateWeek(direction) {
+  currentWeek += direction;
+  renderGrid();
+}
+
+function goToToday() {
+  currentWeek = 0;
+  renderGrid();
+}
+
+function exportData() {
+  alert('Export functionality would save the current schedule data');
+}
+
+// Initialize
+renderLegend();
+renderGrid();
+</script>
+</body>
+</html>
