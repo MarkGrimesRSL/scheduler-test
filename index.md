@@ -1,4 +1,4 @@
 ---
 title: Commissioning test schedule
-ocatoin for test scheduler.
+text:  Locatoin for test scheduler.
 ---
